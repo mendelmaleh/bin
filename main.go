@@ -90,7 +90,7 @@ func Bin(w http.ResponseWriter, r *http.Request, b *bitcask.Bitcask) {
 		if err != nil {
 			if err == bitcask.ErrKeyNotFound {
 				w.WriteHeader(http.StatusNotFound)
-				fmt.Fprintf(w, "no bin with id %s\n", id)
+				fmt.Fprintf(w, "no bin with id %q\n", id)
 				return
 			}
 
