@@ -89,11 +89,13 @@ func Bin(w http.ResponseWriter, r *http.Request, b *bitcask.Bitcask) {
 		buf, err := b.Get([]byte(id))
 		if err != nil {
 			if err == bitcask.ErrKeyNotFound {
+				w.WriteHeader(http.StatusNotFound)
 				fmt.Fprintf(w, "no bin with id %s\n", id)
 				return
 			}
 
 			log.Print(err)
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "error %T when retrieving bin.\n", err)
 			return
 		}
@@ -117,9 +119,11 @@ func Bin(w http.ResponseWriter, r *http.Request, b *bitcask.Bitcask) {
 				id = base26.Itoa(n)
 			}
 		} else if b.Has([]byte(id)) {
+			w.WriteHeader(http.StatusConflict)
 			fmt.Fprintf(w, "id %s is already taken. try again!\n", id)
 			return
 		} else if len(id) > 32 || !isASCII(id) {
+			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(w, "id %s is not valid. ensure it's all ASCII and under 32 chars.\n", id)
 			return
 		}
@@ -128,6 +132,7 @@ func Bin(w http.ResponseWriter, r *http.Request, b *bitcask.Bitcask) {
 		file, _, err := r.FormFile("file")
 		if err != nil {
 			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "error %T when retrieving file, try again.\n", err)
 			return
 		}
@@ -138,6 +143,7 @@ func Bin(w http.ResponseWriter, r *http.Request, b *bitcask.Bitcask) {
 		_, err = io.Copy(&buf, file)
 		if err != nil {
 			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "error %T when retrieving file, try again.\n", err)
 			return
 		}
@@ -146,6 +152,7 @@ func Bin(w http.ResponseWriter, r *http.Request, b *bitcask.Bitcask) {
 		err = b.Put([]byte(id), buf.Bytes())
 		if err != nil {
 			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "error %T when saving file, try again.\n", err)
 			return
 		}
@@ -161,6 +168,7 @@ func Bin(w http.ResponseWriter, r *http.Request, b *bitcask.Bitcask) {
 		q.Set("id", id)
 
 		u.RawQuery = q.Encode()
+		w.WriteHeader(http.StatusCreated)
 		fmt.Fprintf(w, "%s\n", u.String())
 
 		return
