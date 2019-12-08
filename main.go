@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 	"unicode"
 
@@ -160,9 +161,14 @@ func Bin(w http.ResponseWriter, r *http.Request, b *bitcask.Bitcask) {
 
 		// return id
 		u := url.URL{
-			Scheme: "http",
 			Host:   r.Host,
 			Path:   "/", // todo: use config or dynamic
+		}
+
+		if v, ok := r.Header["X-Forwarded-Proto"]; ok {
+			u.Scheme = strings.Join(v, "")
+		} else {
+			u.Scheme = "http"
 		}
 
 		q := url.Values{}
