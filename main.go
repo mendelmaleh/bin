@@ -53,6 +53,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 
 	// setup http server
 	http.HandleFunc(config.Bin.Pattern,
