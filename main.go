@@ -61,8 +61,9 @@ func main() {
 		resp := func() string {
 			if r.Method == http.MethodGet {
 				if r.URL.Path == "/" {
-					return "hi " + words.Code()
+					http.ServeFile(w, r, "index.html")
 				}
+				// serve pastebin from bins dir
 				http.ServeFile(w, r, dir+r.URL.Path)
 			}
 

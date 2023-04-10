@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+</head>
+<body>
+	<header>
+		<h1>pastebin</h1>
+	</header>
+	<div style="display: inline-block">
+		<p>Upload a file</p><br>
+		<input type="file" id="upload" name="upload">
+		<br>
+		<button id=submit disabled>submit</button>
+		<div style="float: right"><button id=code></button></div>
+	</div>
+</body>
+<style>
+	#code {
+		background: var(--nc-bg-2);
+		color: var(--nc-tx-2);
+		border: 1px solid var(--nc-bg-3);
+	}
+	#code:hover, #code:focus {
+		background: var(--nc-bg-3);
+	}
+	#code::before {
+		content: "📋 ";
+	}
+</style>
+<script>
+	const input = document.querySelector('input[type="file"]');
+	const submit = document.querySelector('button[id="submit"]');
+	const code = document.querySelector('button[id="code"]');
+
+	code.style.display = 'none';
+
+	function enable() {
+		submit.disabled = false;
+	}
+
+	input.addEventListener('change', enable);
+
+	async function upload() {
+		const response = await fetch('/', {method: 'POST', body: input.files[0]});
+		text = await response.text();
+		code.textContent = text;
+		code.style.removeProperty('display'); // show button
+	}
+
+	submit.addEventListener('click', upload);
+
+	function copy() {
+		url = window.location.href + code.textContent;
+		navigator.clipboard.writeText(url);
+	}
+
+	code.addEventListener('click', copy);
+</script>
+</html>
