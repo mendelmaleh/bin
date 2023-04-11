@@ -8,63 +8,63 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
-func clean(dir string) {
+type Config struct {
+	Bin struct {
+		Addr string // address for web the webserver
+
+		Dir  string // directory to store the pastebins in
+		Days int    // expiration for files
+	}
+
+	Words WordsConfig
+}
+
+func main() {
+	var config Config
+	var words *Words
+	var counter int
+
 	if err := func() error {
-		files, err := os.ReadDir(dir)
+		// config
+		data, err := os.ReadFile("config.toml")
 		if err != nil {
 			return err
 		}
 
-		cutoff := time.Now().AddDate(0, 0, -7)
-		for _, f := range files {
-			info, err := f.Info()
-			if err != nil {
-				return err
-			}
-
-			if info.ModTime().Before(cutoff) {
-				if err := os.Remove(dir + f.Name()); err != nil {
-					return err
-				}
-			}
+		if err = toml.Unmarshal(data, &config); err != nil {
+			return err
 		}
 
-		return nil
+		// word generator
+		words, err = NewWords(config.Words)
+		return err
 	}(); err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
-}
-
-func main() {
-	const dir = "bins/"
-	var counter int
 
 	// clean up
 	ticker := time.NewTicker(1 * time.Hour)
 	go func() {
 		for {
-			clean(dir)
+			clean(config.Bin.Dir, config.Bin.Days)
 			<-ticker.C
 		}
 	}()
-
-	// word generator
-	words, err := NewWords("/usr/share/dict/usa")
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// web server
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		resp := func() string {
 			if r.Method == http.MethodGet {
 				if r.URL.Path == "/" {
+					// TODO: include file
 					http.ServeFile(w, r, "index.html")
 				}
 				// serve pastebin from bins dir
-				http.ServeFile(w, r, dir+r.URL.Path)
+				http.ServeFile(w, r, config.Bin.Dir+r.URL.Path)
 			}
 
 			if r.Method == http.MethodPost {
@@ -73,7 +73,7 @@ func main() {
 				var code string
 				for {
 					code = words.Code()
-					if _, err := os.Stat(dir + code); errors.Is(err, os.ErrNotExist) {
+					if _, err := os.Stat(config.Bin.Dir + code); errors.Is(err, os.ErrNotExist) {
 						break
 					}
 
@@ -81,7 +81,7 @@ func main() {
 					time.Sleep(time.Second) // rate limit as it gets crowded
 				}
 
-				f, err := os.Create(dir + code)
+				f, err := os.Create(config.Bin.Dir + code)
 				if err != nil {
 					return err.Error()
 				}
@@ -99,7 +99,34 @@ func main() {
 		fmt.Fprintln(w, resp)
 	})
 
-	if err := http.ListenAndServe(":8000", nil); err != nil {
+	if err := http.ListenAndServe(config.Bin.Addr, nil); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func clean(dir string, days int) {
+	if err := func() error {
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			return err
+		}
+
+		cutoff := time.Now().AddDate(0, 0, -days)
+		for _, f := range files {
+			info, err := f.Info()
+			if err != nil {
+				return err
+			}
+
+			if info.ModTime().Before(cutoff) {
+				if err := os.Remove(dir + f.Name()); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	}(); err != nil {
+		log.Println(err)
 	}
 }
