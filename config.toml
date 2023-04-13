@@ -1,0 +1,10 @@
+[bin]
+addr = ":8000"
+dir = "bins/"
+days = 7
+
+[words]
+dict = "/usr/share/dict/usa"
+num = 3
+min = 3
+max = 5
