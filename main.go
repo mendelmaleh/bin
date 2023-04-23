@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +23,9 @@ type Config struct {
 
 	Words WordsConfig
 }
+
+//go:embed index.html
+var index []byte
 
 func main() {
 	var config Config
@@ -60,11 +64,11 @@ func main() {
 		resp := func() string {
 			if r.Method == http.MethodGet {
 				if r.URL.Path == "/" {
-					// TODO: include file
-					http.ServeFile(w, r, "index.html")
+					w.Write(index)
+				} else {
+					// serve pastebin from bins dir
+					http.ServeFile(w, r, config.Bin.Dir+r.URL.Path)
 				}
-				// serve pastebin from bins dir
-				http.ServeFile(w, r, config.Bin.Dir+r.URL.Path)
 			}
 
 			if r.Method == http.MethodPost {
